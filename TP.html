@@ -1,0 +1,131 @@
+<h1><strong>Practical Session - ESXi in Python</strong></h1>
+<p><span style="font-weight: 400;">&nbsp;</span></p>
+<h2><strong>Prerequisites</strong></h2>
+<p>
+    <span style="font-weight: 400;">First, download and install a simple OVA. File can be found </span>
+    <a href="http://menaud.fr/Cours/Cloud/TP/PS1/OVA-Linux/yVM.ova"><span style="font-weight: 400;">here</span></a>.
+    <span style="font-weight: 400;">You must create a tinyVM. This tinyVM is
+        configured with 48 Mb : it&rsquo;s not sufficient for a correct
+        execution, change this value to 128 Mb.</span>
+</p>
+<p><span style="font-weight: 400;">&nbsp;</span></p>
+<h2><strong>Getting started</strong></h2>
+<p><span style="font-weight: 400;">For this practical session you will need a python environment (2.7.x or 3.4 + but I would recommend at least python3) on your computer and </span><strong>pyvmomi.</strong></p>
+<p><span style="font-weight: 400;">You can get pyvmomi with pip :</span></p>
+<blockquote>
+<p><code><span style="font-weight: 400;">$ pip install pyvmomi</span></code></p>
+</blockquote>
+<p><span style="font-weight: 400;">Pyvmomi is a SDK that allows you to manage VMware ESXi and vCenter using python and the VMware vSphere, which is a system of data structures designed to provision, manage, monitor and control the life-cycle of a virtual infrastructure.</span></p>
+<p><span style="font-weight: 400;">If you want further information I suggest you read the official</span><a href="https://code.vmware.com/apis/968/vsphere"> <span style="font-weight: 400;">pyvmomi documentation</span></a><span style="font-weight: 400;">.</span></p>
+<p><span style="font-weight: 400;">&nbsp;</span></p>
+<h2><strong>First Steps with pyvmomi</strong></h2>
+<p><span style="font-weight: 400;">Let's do our first step with this new SDK in order to understand how to use it to manage your VMs in the next parts of this practical session.</span></p>
+<p>&nbsp;</p>
+<ul>
+<li aria-level="1">
+<h3><strong>Connection to the VMware Vsphere API</strong></h3>
+</li>
+</ul>
+<p><span style="font-weight: 400;">The pyvmomi library allows you to connect very easily with your VMs. To do so, open a code editor and import the following function from the Pyvim.connect module :</span></p>
+<p><span style="font-weight: 400;">from pyVim.connect import SmartConnect</span></p>
+<p><span style="font-weight: 400;">Then you can create your connection instance by replacing the following credentials by yours :</span></p>
+<blockquote>
+<p><code><span style="font-weight: 400;">c = SmartConnect(host="ip_address", user="root", pwd="Passw0rd")</span></code></p>
+</blockquote>
+<p><span style="font-weight: 400;">Sadly, this won&rsquo;t be enough to connect to vShpere API, because this connection is using untrusted SSL certificates. To solve this problem add this parameter to the connection method, which disables SSL verification.</span></p>
+<blockquote>
+<div>
+<div><code>disableSslCertValidation=True</code></div>
+</div>
+</blockquote>
+<p><span style="font-weight: 400;">So the line you should have is :</span></p>
+<p><code><span style="font-weight: 400;">&nbsp; &nbsp; c = SmartConnect(host="ip_address", user="root", pwd="Passw0rd", disableSslCertValidation=True)</span></code></p>
+<p><span style="font-weight: 400;">Now we should be good at using the API as we want.</span></p>
+<p>&nbsp;</p>
+<ul>
+<li aria-level="1">
+<h3><strong>Your first script</strong></h3>
+</li>
+</ul>
+<p><span style="font-weight: 400;">Now that you have a connection instance declared, you might want to write some code to manage your VMs and perform actions on them. But where to start ? What are the functions you can use ? Answers to this question can be found on the MOB. To enable the MOB, follow the next steps :</span></p>
+<ol>
+<li>Browse to the host in the vSphere Web Client navigator.</li>
+<li>Click on the&nbsp;<strong>manage&nbsp;</strong>under Navigator on left pane.</li>
+<li>Select&nbsp;<strong>System&nbsp;</strong>tab.</li>
+<li>Click on&nbsp;<strong>Advanced settings</strong>.</li>
+<li>Select the&nbsp;<strong>Config.HostAgent.plugins.solo.enableMob</strong>&nbsp;option and click&nbsp;<strong>Edit</strong>&nbsp;to enable or disable the Managed Object Browser.</li>
+</ol>
+<p>Then you can connect on the MOB via this link :&nbsp;<span style="font-weight: 400;">https://ip-or-fqdn/mob. You can use the IP address or the FQDN of an ESXi host or a vCenter Server&nbsp;</span></p>
+<p><span style="font-weight: 400;">One of the first tests we can do is to use the currentTime method. Add this line to your file :</span></p>
+<blockquote>
+<p><code><span style="font-weight: 400;">print(c.currentTime())</span></code></p>
+</blockquote>
+<p><span style="font-weight: 400;">Save it and run it through a terminal with python (<code>$ python3 myfile.py</code>). What is the result ?</span></p>
+<p><span style="font-weight: 400;">As you can imagine, this API was not written for this kind of call but more for VMs management. That&rsquo;s what we&rsquo;re going to do now with a slightly different script.</span></p>
+<p>&nbsp;</p>
+<ul>
+<li aria-level="1">
+<h3>List all the VMs (complete the '0_vm_list.py' file)</h3>
+</li>
+</ul>
+<p><span style="font-weight: 400;">Open the MOB and navigate through the properties. You should find one called &ldquo;content&rdquo;. To retrieve this content in Python, the MOB tells us to use the method <em>RetrieveServiceContent().</em></span></p>
+<blockquote>
+<p><code><span style="font-weight: 400;">content = c.RetrieveServiceContent()</span></code></p>
+</blockquote>
+<p><span style="font-weight: 400;"> Click on the link it provides and look for &ldquo;rootFolder&rdquo; and also click on its value. The equivalent of doing this in Python is :</span></p>
+<blockquote>
+<p><code><span style="font-weight: 400;">container = content.rootFolder</span></code></p>
+</blockquote>
+<p><span style="font-weight: 400;">Now that this line is written, we are at the root of our datacenter, where our VM is. We just need a way to work with our VMs properly in python. To do so, we use <em>vim</em> from&nbsp;<em>pyvmom&nbsp;</em> and the&nbsp;<em>CreateContainerView()</em> function referenced in the&nbsp;<em>ViewManager&nbsp;</em>page of the MOB.</span></p>
+<blockquote>
+<div><code>view_type = [vim.VirtualMachine]</code></div>
+<div><code>recursive = True</code></div>
+<div><code>container_view = content.viewManager.CreateContainerView(container, view_type, recursive)</code></div>
+<div><code></code></div>
+<div><code></code></div>
+</blockquote>
+<p>We just created a view of our datacenter. Now, to list the vms that it contains, you just have to write :</p>
+<blockquote>
+<div><code></code><code></code></div>
+<div><code>vm_list = container_view.view</code></div>
+</blockquote>
+<p><span style="font-weight: 400;">Finally, back again on the MOB, click one of the VMs ids. You can now check their properties and see that their names are considered as one. So to list all of your VMs with python you just need to add :</span></p>
+<blockquote>
+<p><code><span style="font-weight: 400;">for vm in vms :</span></code></p>
+<p><code><span style="font-weight: 400;">&nbsp; &nbsp; &nbsp; print(vm.name)</span></code></p>
+</blockquote>
+<p><span style="font-weight: 400;">Run this script. What is the result ?</span></p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<h2><strong>VM </strong><strong>Management</strong></h2>
+<p>&nbsp;</p>
+<p><span style="font-weight: 400;">Download the zip file containing the code samples that we will be using for this session. Thanks to the MOB, to </span><a href="http://vijava.sourceforge.net/vSphereAPIDoc/ver5/ReferenceGuide/index-mo_types.html"><span style="font-weight: 400;">this documentation</span></a><span style="font-weight: 400;"> and the provided python scripts, answer the following problems by filling the missing code.</span></p>
+<p>&nbsp;</p>
+<ul>
+<li aria-level="1">
+<h3>Access configuration (complete the '1_vm_config.py' file)</h3>
+</li>
+</ul>
+<p><span style="font-weight: 400;">Retrieve these properties from your VM : name, state (powerState), memory size (memoryMB), number of virtual CPUs (numCPU).</span></p>
+<p>&nbsp;</p>
+<ul>
+<li aria-level="1">
+<h3><strong>VM life cycle (complete the following files: '2_power_on.py', '3_power_off.py', '4_suspend.py', '5_resume.py')</strong></h3>
+</li>
+</ul>
+<p><span style="font-weight: 400;">Figure out how to power on, power off, suspend and resume your VM.</span></p>
+<p>&nbsp;</p>
+<ul>
+<li aria-level="1">
+<h3><strong>Snapshot your VM (complete the following files: '6_vm_snapshot.py', '7_vm_remove_snapshots.py')</strong></h3>
+</li>
+</ul>
+<p><span style="font-weight: 400;">Do a snapshot of your VM, then, list the existing snapshots. Remove all snapshots.</span></p>
+<p>&nbsp;</p>
+<ul>
+<li aria-level="1">
+<h3><strong>CPU Activity (complete the '8_vm_cpu_info.py' file)</strong></h3>
+</li>
+</ul>
+<p><span style="font-weight: 400;">Retrieve the CPU information of your VM.</span></p>
+<p>&nbsp;</p>
